@@ -41,7 +41,7 @@ public class GameController {
 
         SwingWorker<Boolean, Point> worker = new SwingWorker<>() {
             boolean success;
-            long time;
+            long algoTime;
 
             @Override
             protected Boolean doInBackground() throws Exception {
@@ -49,11 +49,11 @@ public class GameController {
                 if ("Backtracking".equals(algorithm)) {
                     game.model.BacktrackingSolver solver = new game.model.BacktrackingSolver(board);
                     solved = solver.solve(view.getStartX(), view.getStartY());
-                    time = solver.getExecutionTimeMillis();
+                    algoTime = solver.getExecutionTimeMillis();
                 } else {
                     game.model.WarnsdorffSolver solver = new game.model.WarnsdorffSolver(board);
                     solved = solver.solve(view.getStartX(), view.getStartY());
-                    time = solver.getExecutionTimeMillis();
+                    algoTime = solver.getExecutionTimeMillis();
                 }
 
                 if (solved) {
@@ -79,17 +79,17 @@ public class GameController {
                 isAnimating = false;
                 try {
                     boolean success = get();
-                    view.showResult(success);
+                    view.showResult(success, algoTime);
 
                     String playerName = view.getPlayerName();
                     if (playerName != null && !playerName.isBlank()) {
                         DatabaseHelper.saveResult(
                                 playerName,
-                                view.getCurrentAlgorithm(), // ✅ Correct
-                                view.getStartX(),            // ✅ Correct
-                                view.getStartY(),            // ✅ Correct
+                                view.getCurrentAlgorithm(),
+                                view.getStartX(),
+                                view.getStartY(),
                                 success,
-                                view.getElapsedTime()
+                                algoTime
                         );
                         view.reloadResults();
                     }

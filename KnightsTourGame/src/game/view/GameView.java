@@ -34,6 +34,10 @@ public class GameView extends JFrame {
     private int startX, startY; // ✅ Track actual start position
     private String currentAlgorithm; // ✅ Track actual algorithm
 
+    private boolean manualMode = false;
+    private int knightX, knightY;
+    private int visitedSquares = 0;
+
     public GameView() {
         setTitle("Knight's Tour Game");
         setSize(750, 850);
@@ -92,17 +96,20 @@ public class GameView extends JFrame {
         JButton btnWarnsdorff = new JButton("Warnsdorff");
         JButton btnReset = new JButton("Reset");
         JButton btnTheme = new JButton("Toggle Theme");
+        JButton btnManual = new JButton("Manual Mode");
 
         Color brownColor = new Color(60, 31, 6);
         btnBacktracking.setBackground(brownColor);
         btnWarnsdorff.setBackground(brownColor);
         btnReset.setBackground(brownColor);
         btnTheme.setBackground(brownColor);
+        btnManual.setBackground(brownColor);
 
         btnBacktracking.setForeground(Color.WHITE);
         btnWarnsdorff.setForeground(Color.WHITE);
         btnReset.setForeground(Color.WHITE);
         btnTheme.setForeground(Color.WHITE);
+        btnManual.setForeground(Color.WHITE);
 
         playerDropdown.setEditable(true);
         playerDropdown.setPreferredSize(new Dimension(180, 30));
@@ -113,6 +120,7 @@ public class GameView extends JFrame {
         controlPanel.add(btnWarnsdorff);
         controlPanel.add(btnReset);
         controlPanel.add(btnTheme);
+        controlPanel.add(btnManual);
 
         btnBacktracking.addActionListener(e -> {
             startTime = System.currentTimeMillis();
@@ -132,6 +140,13 @@ public class GameView extends JFrame {
 
         btnTheme.addActionListener(e -> {
             if (themeToggleListener != null) themeToggleListener.run();
+        });
+
+        btnManual.addActionListener(e -> {
+            enableManualMode(!manualMode);
+            btnManual.setText(manualMode ? "Algorithm Mode" : "Manual Mode");
+            resetBoard(new Random().nextInt(8), new Random().nextInt(8));
+            visitedSquares = 0;
         });
 
         gameTabPanel.add(controlPanel, BorderLayout.SOUTH);
@@ -241,9 +256,8 @@ public class GameView extends JFrame {
         }
     }
 
-    public void showResult(boolean success) {
-        long time = System.currentTimeMillis() - startTime;
-        statusLabel.setText((success ? " Success!" : " Failed!") + " Time: " + time + " ms");
+    public void showResult(boolean success, long algoTime) {
+        statusLabel.setText((success ? " Success!" : " Failed!") + " Time: " + algoTime + " ms");
     }
 
     public List<Point> getTourPath(int[][] board) {
@@ -321,5 +335,76 @@ public class GameView extends JFrame {
             JOptionPane.showMessageDialog(this, "Error loading players from the database.", "Database Error", JOptionPane.ERROR_MESSAGE);
         }
         for (String name : names) playerModel.addElement(name);
+    }
+
+    public void enableManualMode(boolean enable) {
+        manualMode = enable;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                JButton btn = cells[i][j];
+                for (var al : btn.getActionListeners()) btn.removeActionListener(al);
+                if (manualMode) {
+                    int finalI = i, finalJ = j;
+                    btn.setEnabled(true);
+                    btn.addActionListener(e -> handleManualMove(finalI, finalJ));
+                } else {
+                    btn.setEnabled(false);
+                }
+            }
+        }
+    }
+
+    private void handleManualMove(int x, int y) {
+        if (visitedSquares == 0) {
+            knightX = x;
+            knightY = y;
+            visitedSquares = 1;
+            boardPanel.setEnabled(false);
+            cells[x][y].setIcon(knightIcon);
+            cells[x][y].setBackground(new Color(255, 0, 98));
+            cells[x][y].setText("1");
+            statusLabel.setText("Knight starts at (" + x + ", " + y + ")");
+            return;
+        }
+        if (!isValidKnightMove(knightX, knightY, x, y) || !cells[x][y].getText().isEmpty()) {
+            statusLabel.setText("Invalid move!");
+            return;
+        }
+        visitedSquares++;
+        knightX = x;
+        knightY = y;
+        cells[x][y].setIcon(knightIcon);
+        cells[x][y].setBackground(new Color(255, 0, 98));
+        cells[x][y].setText(String.valueOf(visitedSquares));
+        if (visitedSquares == 64) {
+            showResult(true, 0);
+            disableManualBoard();
+        } else if (!hasValidMoves()) {
+            showResult(false, 0);
+            disableManualBoard();
+        }
+    }
+
+    private boolean isValidKnightMove(int fromX, int fromY, int toX, int toY) {
+        int dx = Math.abs(fromX - toX);
+        int dy = Math.abs(fromY - toY);
+        return (dx == 2 && dy == 1) || (dx == 1 && dy == 2);
+    }
+
+    private boolean hasValidMoves() {
+        for (int i = 0; i < 8; i++) {
+            int nx = knightX + new int[]{2,1,-1,-2,-2,-1,1,2}[i];
+            int ny = knightY + new int[]{1,2,2,1,-1,-2,-2,-1}[i];
+            if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8 && cells[nx][ny].getText().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void disableManualBoard() {
+        for (int i = 0; i < 8; i++)
+            for (int j = 0; j < 8; j++)
+                cells[i][j].setEnabled(false);
     }
 }
